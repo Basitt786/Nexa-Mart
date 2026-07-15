@@ -47,12 +47,26 @@ export function CarouselDemo() {
               <CarouselItem key={ind} className={isLastImage ? "hidden md:block" : ""}>
                 {/* Mobile ki height alag (block md:hidden) */}
                 <div className="relative overflow-hidden rounded-lg h-[100px] w-full md:hidden">
-                  <Image src={img} alt={`Mobile Image ${ind + 1}`} fill className="object-cover" priority={ind === 0} />
+                  <Image 
+                    src={img} 
+                    alt={`Mobile Image ${ind + 1}`} 
+                    fill 
+                    sizes="(max-width: 768px) 100vw, 50vw" // <-- Mobile ke liye sizes fix
+                    className="object-cover" 
+                    priority={ind === 0} 
+                  />
                 </div>
 
                 {/* Desktop ki height alag (hidden md:block) */}
                 <div className="relative overflow-hidden rounded-lg h-[350px] w-full hidden md:block">
-                  <Image src={img} alt={`Desktop Image ${ind + 1}`} fill className="object-cover" priority={ind === 0} />
+                  <Image 
+                    src={img} 
+                    alt={`Desktop Image ${ind + 1}`} 
+                    fill 
+                    sizes="(max-width: 1200px) 100vw, 1152px" // <-- Desktop ke liye sizes fix (max-w-6xl)
+                    className="object-cover" 
+                    priority={ind === 0} 
+                  />
                 </div>
               </CarouselItem>
             );
