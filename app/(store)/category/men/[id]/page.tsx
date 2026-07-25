@@ -1,6 +1,10 @@
 import ImageWithSpinner from '@/components/ImageWithSpinner';
 import { ShoppingCart, Zap, Star } from 'lucide-react';
-import Link from 'next/link';
+import { notFound } from 'next/navigation';
+import { Metadata } from 'next';
+
+// Build-time static generation failures aur FakeStore API blocking se bachne ke liye
+export const dynamic = 'force-dynamic';
 
 type ProductData = {
   id: number;
@@ -21,44 +25,58 @@ type PageProps = {
   }>;
 };
 
-const Page = async ({ params }: PageProps) => {
-  const resolvedParams = await params;
-  const { id } = resolvedParams;
-
-  let data: ProductData | null = null;
-
-  // 1. Safe Fetch with Fallback Handling
+// 1. Helper function for consistent data fetching
+async function getProduct(id: string): Promise<ProductData | null> {
   try {
     const res = await fetch(`https://fakestoreapi.com/products/${id}`, {
-      next: { revalidate: 60 } // Prevents hitting rate-limits on every single request
+      headers: {
+        'User-Agent':
+          'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+        Accept: 'application/json',
+      },
+      cache: 'no-store',
     });
 
-    if (res.ok) {
-      data = await res.json();
-    }
+    if (!res.ok) return null;
+    return await res.json();
   } catch (error) {
     console.error(`Error fetching product ID ${id}:`, error);
+    return null;
+  }
+}
+
+// 2. Dynamic Metadata for SEO
+export async function generateMetadata({ params }: PageProps): Promise<Metadata> {
+  const resolvedParams = await params;
+  const product = await getProduct(resolvedParams.id);
+
+  if (!product) {
+    return {
+      title: 'Product Not Found',
+    };
   }
 
-  // 2. Friendly UI Fallback instead of Server Exception Crash
+  return {
+    title: `${product.title} | Store`,
+    description: product.description.slice(0, 160),
+    openGraph: {
+      title: product.title,
+      description: product.description,
+      images: [{ url: product.image }],
+    },
+  };
+}
+
+// 3. Main Page Component
+const Page = async ({ params }: PageProps) => {
+  const resolvedParams = await params;
+  const data = await getProduct(resolvedParams.id);
+
+  // Direct Next.js 404 Trigger
   if (!data || !data.id) {
-    return (
-      <div className="min-h-screen flex flex-col items-center justify-center bg-gray-50 dark:bg-black text-gray-900 dark:text-white p-4">
-        <h2 className="text-2xl font-bold mb-2">Product Not Found</h2>
-        <p className="text-gray-500 dark:text-gray-400 mb-6 text-center max-w-md">
-          The product you are looking for might be unavailable or removed.
-        </p>
-        <Link
-          href="/"
-          className="px-6 py-3 bg-red-600 hover:bg-red-700 text-white font-medium rounded-xl transition-colors shadow-md"
-        >
-          Return to Home
-        </Link>
-      </div>
-    );
+    notFound();
   }
 
-  // Safe Fallback Values for Rating
   const ratingRate = data.rating?.rate ?? 0;
   const ratingCount = data.rating?.count ?? 0;
 
@@ -101,7 +119,7 @@ const Page = async ({ params }: PageProps) => {
             {/* Price */}
             <div className="flex items-baseline gap-3 border-y border-gray-100 dark:border-zinc-800 py-4">
               <span className="text-3xl sm:text-4xl font-extrabold text-gray-900 dark:text-white">
-                ${data.price ? data.price.toFixed(2) : "0.00"}
+                ${data.price ? data.price.toFixed(2) : '0.00'}
               </span>
               <span className="text-xs text-emerald-700 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-950/50 px-2.5 py-1 rounded-md font-medium border border-emerald-100 dark:border-emerald-900/50">
                 In Stock

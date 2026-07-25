@@ -2,6 +2,9 @@ import ImageWithSpinner from '@/components/ImageWithSpinner';
 import { ShoppingCart, Zap, Star } from 'lucide-react';
 import { notFound } from 'next/navigation';
 
+// 🚨 Build-time static rendering failure ko bypass karne ke liye force-dynamic set karein
+export const dynamic = 'force-dynamic';
+
 type ProductData = {
   id: number;
   title: string;
@@ -25,18 +28,26 @@ const Page = async ({ params }: PageProps) => {
   const resolvedParams = await params;
   const { id } = resolvedParams;
 
-  const res = await fetch(`https://fakestoreapi.com/products/${id}`, {
-    // Next.js caching strategy (Optional: adjust as per app needs)
-    next: { revalidate: 3600 },
-  });
+  let data: ProductData | null = null;
 
-  // Agar ID invalid ho ya product server par exist na kare
-  if (!res.ok) {
-    notFound();
+  try {
+    const res = await fetch(`https://fakestoreapi.com/products/${id}`, {
+      headers: {
+        'User-Agent':
+          'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+        Accept: 'application/json',
+      },
+      cache: 'no-store',
+    });
+
+    if (res.ok) {
+      data = await res.json();
+    }
+  } catch (error) {
+    console.error(`Failed to fetch product with ID ${id}:`, error);
   }
 
-  const data: ProductData = await res.json();
-
+  // Agar product API se nahi mila ya invalid hai, tab 404 trigger hoga
   if (!data || !data.id) {
     notFound();
   }
