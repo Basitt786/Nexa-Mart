@@ -1,5 +1,6 @@
 import ImageWithSpinner from '@/components/ImageWithSpinner';
 import { ShoppingCart, Zap, Star } from 'lucide-react';
+import { notFound } from 'next/navigation';
 
 type ProductData = {
   id: number;
@@ -8,7 +9,7 @@ type ProductData = {
   image: string;
   description: string;
   category: string;
-  rating: {
+  rating?: {
     rate: number;
     count: number;
   };
@@ -24,20 +25,20 @@ const Page = async ({ params }: PageProps) => {
   const resolvedParams = await params;
   const { id } = resolvedParams;
 
-  const res = await fetch(`https://fakestoreapi.com/products/${id}`);
+  const res = await fetch(`https://fakestoreapi.com/products/${id}`, {
+    // Next.js caching strategy (Optional: adjust as per app needs)
+    next: { revalidate: 3600 },
+  });
 
+  // Agar ID invalid ho ya product server par exist na kare
   if (!res.ok) {
-    throw new Error('Failed to fetch product');
+    notFound();
   }
 
   const data: ProductData = await res.json();
 
-  if (!data) {
-    return (
-      <div className="min-h-screen flex items-center justify-center text-gray-500 dark:text-gray-400">
-        Product not found
-      </div>
-    );
+  if (!data || !data.id) {
+    notFound();
   }
 
   return (
@@ -65,21 +66,21 @@ const Page = async ({ params }: PageProps) => {
               </h1>
             </div>
 
-            {/* Rating & Count */}
+            {/* Rating & Count with Safe Guards */}
             <div className="flex items-center gap-3">
               <div className="flex items-center gap-1.5 bg-amber-50 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-800/60 px-2.5 py-1 rounded-lg text-amber-700 dark:text-amber-400 text-sm font-semibold">
                 <Star className="w-4 h-4 fill-amber-400 text-amber-400" />
-                <span>{data.rating.rate}</span>
+                <span>{data.rating?.rate ?? 0}</span>
               </div>
               <span className="text-gray-500 dark:text-gray-400 text-sm">
-                ({data.rating.count} reviews)
+                ({data.rating?.count ?? 0} reviews)
               </span>
             </div>
 
             {/* Price */}
             <div className="flex items-baseline gap-3 border-y border-gray-100 dark:border-zinc-800 py-4">
               <span className="text-3xl sm:text-4xl font-extrabold text-gray-900 dark:text-white">
-                ${data.price.toFixed(2)}
+                ${data.price ? data.price.toFixed(2) : '0.00'}
               </span>
               <span className="text-xs text-emerald-700 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-950/50 px-2.5 py-1 rounded-md font-medium border border-emerald-100 dark:border-emerald-900/50">
                 In Stock
@@ -93,13 +94,11 @@ const Page = async ({ params }: PageProps) => {
 
             {/* Action Buttons */}
             <div className="flex flex-col sm:flex-row gap-3 pt-2">
-              {/* Add to Cart Button */}
               <button className="flex-1 bg-gray-900 dark:bg-white hover:bg-black dark:hover:bg-gray-200 text-white dark:text-gray-900 font-semibold py-3.5 px-6 rounded-xl transition-all duration-200 flex items-center justify-center gap-2 shadow-sm active:scale-95">
                 <ShoppingCart className="w-5 h-5 text-gray-300 dark:text-gray-700" />
                 <span>Add to Cart</span>
               </button>
 
-              {/* Buy Now Button */}
               <button className="flex-1 bg-red-600 hover:bg-red-700 text-white font-semibold py-3.5 px-6 rounded-xl transition-all duration-200 flex items-center justify-center gap-2 shadow-sm shadow-red-600/20 active:scale-95">
                 <Zap className="w-5 h-5 fill-white" />
                 <span>Buy Now</span>

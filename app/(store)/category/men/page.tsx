@@ -5,18 +5,23 @@ import { useQuery } from "@tanstack/react-query";
 import Link from "next/link";
 import Image from "next/image";
 
-const page = () => {
-  type Product = {
-    id: number;
-    title: string;
-    price: number;
-    image: string;
-  };
+type Product = {
+  id: number;
+  title: string;
+  price: number;
+  image: string;
+};
 
-  const { data, isLoading, error } = useQuery({
-    queryKey: ["meinClothes"],
+const Page = () => {
+  const { data, isLoading, error } = useQuery<Product[]>({
+    queryKey: ["menClothes"],
     queryFn: async () => {
-      const res = await fetch("https://fakestoreapi.com/products/category/men's clothing");
+      const res = await fetch(
+        `https://fakestoreapi.com/products/category/${encodeURIComponent("men's clothing")}`
+      );
+      if (!res.ok) {
+        throw new Error("Failed to fetch products from server");
+      }
       return res.json();
     },
   });
@@ -25,19 +30,29 @@ const page = () => {
     return (
       <div className="flex items-center justify-center h-screen">
         <Image
-          src="/image.png"   
+          src="/image.png"
           alt="Loading..."
           width={140}
           height={140}
           className="animate-caret-blink"
-          style={{ width: 'auto', height: 'auto' }}
+          style={{ width: "auto", height: "auto" }}
+          priority
         />
       </div>
     );
   }
 
   if (error) {
-    return <div>Error: {(error as Error).message}</div>;
+    return (
+      <div className="flex flex-col items-center justify-center h-[60vh] text-center px-4">
+        <p className="text-red-500 font-semibold text-lg mb-2">
+          Unable to load products
+        </p>
+        <p className="text-zinc-400 text-sm max-w-sm">
+          {(error as Error).message}
+        </p>
+      </div>
+    );
   }
 
   return (
@@ -46,14 +61,15 @@ const page = () => {
         <h1 className="text-2xl md:text-3xl font-medium">All Sale Products</h1>
       </div>
 
-      <div className="w-full mt-2 rounded-2xl bg-gradient-to-r from-transparent via-black to-transparent flex justify-center items-center gap-4 flex-wrap p-4">
-        {data?.map((item: Product) => {
+      {/* Grid Layout instead of Flex-Wrap for predictable card spacing */}
+      <div className="w-full mt-4 rounded-2xl bg-gradient-to-r from-transparent via-black to-transparent grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 p-4">
+        {data?.map((item) => {
           const { id, title, image, price } = item;
           return (
             <div
               key={id}
               className="
-                w-full sm:w-[48%] md:w-[24%]
+                w-full
                 p-4 sm:p-6
                 bg-black/50
                 border border-white/10
@@ -65,7 +81,7 @@ const page = () => {
                 transition-all
                 duration-300
                 hover:border-red-600/50
-                hover:scale-105
+                hover:scale-[1.02]
               "
             >
               <div className="flex flex-col items-center w-full">
@@ -73,10 +89,11 @@ const page = () => {
                 <h2 className="text-white font-semibold mt-4 text-center text-sm sm:text-base line-clamp-2">
                   {title}
                 </h2>
-                <p className="text-red-500 font-bold mt-2 text-lg">${price}</p>
+                <p className="text-red-500 font-bold mt-2 text-lg">
+                  ${price ? price.toFixed(2) : "0.00"}
+                </p>
               </div>
 
-              {/* 👇 VIEW DETAILS BUTTON YAHAN LAGA DIYA HAI */}
               <Link
                 href={`/category/men/${id}`}
                 className="
@@ -93,6 +110,7 @@ const page = () => {
                   text-center
                   transition-colors
                   shadow-md
+                  active:scale-95
                 "
               >
                 View Details
@@ -105,4 +123,4 @@ const page = () => {
   );
 };
 
-export default page;
+export default Page;

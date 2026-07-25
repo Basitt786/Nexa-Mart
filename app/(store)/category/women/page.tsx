@@ -5,19 +5,23 @@ import { useQuery } from "@tanstack/react-query";
 import Link from "next/link";
 import Image from "next/image";
 
-const Page = () => {
-  type Product = {
-    id: number;
-    title: string;
-    price: number;
-    image: string;
-  };
+type Product = {
+  id: number;
+  title: string;
+  price: number;
+  image: string;
+};
 
-  const { data, isLoading, error } = useQuery({
+const Page = () => {
+  const { data, isLoading, error } = useQuery<Product[]>({
     queryKey: ["womenClothes"],
     queryFn: async () => {
-      // FakeStore API requires "women's clothing"
-      const res = await fetch("https://fakestoreapi.com/products/category/women's%20clothing");
+      // FakeStore API category endpoint with encoding
+      const res = await fetch(
+        `https://fakestoreapi.com/products/category/${encodeURIComponent(
+          "women's clothing"
+        )}`
+      );
       if (!res.ok) {
         throw new Error("Failed to fetch products");
       }
@@ -34,7 +38,8 @@ const Page = () => {
           width={140}
           height={140}
           className="animate-caret-blink"
-          style={{ width: 'auto', height: 'auto' }}
+          style={{ width: "auto", height: "auto" }}
+          priority
         />
       </div>
     );
@@ -42,8 +47,13 @@ const Page = () => {
 
   if (error) {
     return (
-      <div className="flex justify-center items-center h-64 text-red-500 font-semibold">
-        Error: {(error as Error).message}
+      <div className="flex flex-col items-center justify-center h-[60vh] text-center px-4">
+        <p className="text-red-500 font-semibold text-lg mb-1">
+          Unable to load products
+        </p>
+        <p className="text-zinc-400 text-sm max-w-sm">
+          {(error as Error).message}
+        </p>
       </div>
     );
   }
@@ -54,14 +64,15 @@ const Page = () => {
         <h1 className="text-2xl md:text-3xl font-medium">All Sale Products</h1>
       </div>
 
-      <div className="w-full mt-2 rounded-2xl bg-gradient-to-r from-transparent via-black to-transparent flex justify-center items-center gap-4 flex-wrap p-4">
-        {data?.map((item: Product) => {
+      {/* Grid container for perfectly balanced columns across viewports */}
+      <div className="w-full mt-4 rounded-2xl bg-gradient-to-r from-transparent via-black to-transparent grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 p-4">
+        {data?.map((item) => {
           const { id, title, image, price } = item;
           return (
             <div
               key={id}
               className="
-                w-full sm:w-[48%] md:w-[24%]
+                w-full
                 p-4 sm:p-6
                 bg-black/50
                 border border-white/10
@@ -73,7 +84,7 @@ const Page = () => {
                 transition-all
                 duration-300
                 hover:border-red-600/50
-                hover:scale-105
+                hover:scale-[1.02]
               "
             >
               <div className="flex flex-col items-center w-full">
@@ -81,7 +92,9 @@ const Page = () => {
                 <h2 className="text-white font-semibold mt-4 text-center text-sm sm:text-base line-clamp-2">
                   {title}
                 </h2>
-                <p className="text-red-500 font-bold mt-2 text-lg">${price}</p>
+                <p className="text-red-500 font-bold mt-2 text-lg">
+                  ${price ? price.toFixed(2) : "0.00"}
+                </p>
               </div>
 
               {/* View Details Button */}
@@ -101,6 +114,7 @@ const Page = () => {
                   text-center
                   transition-colors
                   shadow-md
+                  active:scale-95
                 "
               >
                 View Details

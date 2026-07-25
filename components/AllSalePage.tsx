@@ -7,39 +7,43 @@ import ImageWithSpinner from "./ImageWithSpinner";
 import { useSelector } from "react-redux";
 import { RootState } from "@/app/store/store";
 
-const AllSalePage = () => {
-  type Product = {
-    id: number;
-    title: string;
-    price: number;
-    image: string;
-    category: string;
-  };
+type Product = {
+  id: number;
+  title: string;
+  price: number;
+  image: string;
+  category: string;
+};
 
-  const { data, isLoading, error } = useQuery({
+const fetchProducts = async (): Promise<Product[]> => {
+  const res = await fetch("https://fakestoreapi.com/products");
+  if (!res.ok) {
+    throw new Error("Failed to fetch products");
+  }
+  return res.json();
+};
+
+const AllSalePage = () => {
+  const { data, isLoading, error } = useQuery<Product[]>({
     queryKey: ["AllSales"],
-    queryFn: async () => {
-      const res = await fetch("https://fakestoreapi.com/products");
-      if (!res.ok) {
-        throw new Error("Failed to fetch products");
-      }
-      return res.json();
-    },
+    queryFn: fetchProducts,
   });
 
-  const query = useSelector((state: RootState) => state.search.query);
-  const filteredProducts =
-    data?.filter((product: Product) => {
-      return product.title.toLowerCase().includes(query.toLowerCase());
-    }) || [];
+  const query = useSelector((state: RootState) => state.search?.query || "");
 
-  // Helper function: API category name ko aapke route folder name se match karne ke liye
+  const filteredProducts =
+    data?.filter((product: Product) =>
+      product.title.toLowerCase().includes(query.toLowerCase())
+    ) || [];
+
+  // Route resolver: Robust checks for routing
   const getProductRoute = (category: string, id: number) => {
-    if (category.includes("men's clothing")) return `/category/men/${id}`;
-    if (category.includes("women's clothing")) return `/category/women/${id}`;
-    if (category.includes("electronics")) return `/category/electronics/${id}`;
-    if (category.includes("jewelery")) return `/category/jewelery/${id}`;
-    return `/products/${id}`; // fallback route
+    const cat = category.toLowerCase();
+    if (cat.includes("men") && !cat.includes("women")) return `/category/men/${id}`;
+    if (cat.includes("women")) return `/category/women/${id}`;
+    if (cat.includes("electronic")) return `/category/electronics/${id}`;
+    if (cat.includes("jewel") || cat.includes("jewelry")) return `/category/jewelery/${id}`;
+    return `/products/${id}`; // Safe fallback route
   };
 
   if (isLoading) {
@@ -50,8 +54,8 @@ const AllSalePage = () => {
           alt="Loading..."
           width={140}
           height={140}
-          className="animate-caret-blink"
-          style={{ width: "auto", height: "auto" }}
+          className="animate-caret-blink w-auto h-auto"
+          priority
         />
       </div>
     );
@@ -77,59 +81,63 @@ const AllSalePage = () => {
         </div>
 
         <div className="w-full mt-2 rounded-2xl bg-gradient-to-r from-transparent via-black to-transparent flex justify-center items-center gap-4 flex-wrap p-4">
-          {filteredProducts.map((item: Product) => {
-            const { id, title, image, price, category } = item;
-            return (
-              <div
-                key={id}
-                className="
-                  w-full sm:w-[48%] md:w-[24%]
-                  p-4 sm:p-6
-                  bg-black/50
-                  border border-white/10
-                  rounded-2xl
-                  flex
-                  flex-col
-                  items-center
-                  justify-between
-                  transition-all
-                  duration-300
-                  hover:border-red-600/50
-                  hover:scale-105
-                "
-              >
-                <div className="flex flex-col items-center w-full">
-                  <ImageWithSpinner src={image} alt={title} />
-                  <h2 className="text-white font-semibold mt-4 text-center text-sm sm:text-base line-clamp-2">
-                    {title}
-                  </h2>
-                  <p className="text-red-500 font-bold mt-2 text-lg">${price}</p>
-                </div>
-
-                {/* Dynamic Category Route Link */}
-                <Link
-                  href={getProductRoute(category, id)}
+          {filteredProducts.length === 0 ? (
+            <div className="text-gray-400 py-10">No products found matching "{query}"</div>
+          ) : (
+            filteredProducts.map((item: Product) => {
+              const { id, title, image, price, category } = item;
+              return (
+                <div
+                  key={id}
                   className="
-                    mt-4
-                    w-full
-                    py-2.5
-                    px-4
-                    bg-red-600
-                    hover:bg-red-700
-                    text-white
-                    font-medium
-                    text-sm
-                    rounded-xl
-                    text-center
-                    transition-colors
-                    shadow-md
+                    w-full sm:w-[48%] md:w-[24%]
+                    p-4 sm:p-6
+                    bg-black/50
+                    border border-white/10
+                    rounded-2xl
+                    flex
+                    flex-col
+                    items-center
+                    justify-between
+                    transition-all
+                    duration-300
+                    hover:border-red-600/50
+                    hover:scale-105
                   "
                 >
-                  View Details
-                </Link>
-              </div>
-            );
-          })}
+                  <div className="flex flex-col items-center w-full">
+                    <ImageWithSpinner src={image} alt={title} />
+                    <h2 className="text-white font-semibold mt-4 text-center text-sm sm:text-base line-clamp-2">
+                      {title}
+                    </h2>
+                    <p className="text-red-500 font-bold mt-2 text-lg">${price}</p>
+                  </div>
+
+                  {/* Dynamic Route Link */}
+                  <Link
+                    href={getProductRoute(category, id)}
+                    className="
+                      mt-4
+                      w-full
+                      py-2.5
+                      px-4
+                      bg-red-600
+                      hover:bg-red-700
+                      text-white
+                      font-medium
+                      text-sm
+                      rounded-xl
+                      text-center
+                      transition-colors
+                      shadow-md
+                    "
+                  >
+                    View Details
+                  </Link>
+                </div>
+              );
+            })
+          )}
         </div>
       </div>
     </>

@@ -1,5 +1,6 @@
 import ImageWithSpinner from '@/components/ImageWithSpinner';
 import { ShoppingCart, Zap, Star } from 'lucide-react';
+import Link from 'next/link';
 
 type ProductData = {
   id: number;
@@ -8,7 +9,7 @@ type ProductData = {
   image: string;
   description: string;
   category: string;
-  rating: {
+  rating?: {
     rate: number;
     count: number;
   };
@@ -24,21 +25,42 @@ const Page = async ({ params }: PageProps) => {
   const resolvedParams = await params;
   const { id } = resolvedParams;
 
-  const res = await fetch(`https://fakestoreapi.com/products/${id}`);
+  let data: ProductData | null = null;
 
-  if (!res.ok) {
-    throw new Error('Failed to fetch product');
+  // 1. Safe Fetch with Fallback Handling
+  try {
+    const res = await fetch(`https://fakestoreapi.com/products/${id}`, {
+      next: { revalidate: 60 } // Prevents hitting rate-limits on every single request
+    });
+
+    if (res.ok) {
+      data = await res.json();
+    }
+  } catch (error) {
+    console.error(`Error fetching product ID ${id}:`, error);
   }
 
-  const data: ProductData = await res.json();
-
-  if (!data) {
+  // 2. Friendly UI Fallback instead of Server Exception Crash
+  if (!data || !data.id) {
     return (
-      <div className="min-h-screen flex items-center justify-center text-gray-500 dark:text-gray-400">
-        Product not found
+      <div className="min-h-screen flex flex-col items-center justify-center bg-gray-50 dark:bg-black text-gray-900 dark:text-white p-4">
+        <h2 className="text-2xl font-bold mb-2">Product Not Found</h2>
+        <p className="text-gray-500 dark:text-gray-400 mb-6 text-center max-w-md">
+          The product you are looking for might be unavailable or removed.
+        </p>
+        <Link
+          href="/"
+          className="px-6 py-3 bg-red-600 hover:bg-red-700 text-white font-medium rounded-xl transition-colors shadow-md"
+        >
+          Return to Home
+        </Link>
       </div>
     );
   }
+
+  // Safe Fallback Values for Rating
+  const ratingRate = data.rating?.rate ?? 0;
+  const ratingCount = data.rating?.count ?? 0;
 
   return (
     <div className="min-h-screen p-4 sm:p-6 lg:p-12 flex items-center justify-center bg-gray-50 dark:bg-black transition-colors duration-200">
@@ -69,17 +91,17 @@ const Page = async ({ params }: PageProps) => {
             <div className="flex items-center gap-3">
               <div className="flex items-center gap-1.5 bg-amber-50 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-800/60 px-2.5 py-1 rounded-lg text-amber-700 dark:text-amber-400 text-sm font-semibold">
                 <Star className="w-4 h-4 fill-amber-400 text-amber-400" />
-                <span>{data.rating.rate}</span>
+                <span>{ratingRate}</span>
               </div>
               <span className="text-gray-500 dark:text-gray-400 text-sm">
-                ({data.rating.count} reviews)
+                ({ratingCount} reviews)
               </span>
             </div>
 
             {/* Price */}
             <div className="flex items-baseline gap-3 border-y border-gray-100 dark:border-zinc-800 py-4">
               <span className="text-3xl sm:text-4xl font-extrabold text-gray-900 dark:text-white">
-                ${data.price.toFixed(2)}
+                ${data.price ? data.price.toFixed(2) : "0.00"}
               </span>
               <span className="text-xs text-emerald-700 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-950/50 px-2.5 py-1 rounded-md font-medium border border-emerald-100 dark:border-emerald-900/50">
                 In Stock
@@ -93,13 +115,11 @@ const Page = async ({ params }: PageProps) => {
 
             {/* Action Buttons */}
             <div className="flex flex-col sm:flex-row gap-3 pt-2">
-              {/* Add to Cart Button */}
               <button className="flex-1 bg-gray-900 dark:bg-white hover:bg-black dark:hover:bg-gray-200 text-white dark:text-gray-900 font-semibold py-3.5 px-6 rounded-xl transition-all duration-200 flex items-center justify-center gap-2 shadow-sm active:scale-95">
                 <ShoppingCart className="w-5 h-5 text-gray-300 dark:text-gray-700" />
                 <span>Add to Cart</span>
               </button>
 
-              {/* Buy Now Button */}
               <button className="flex-1 bg-red-600 hover:bg-red-700 text-white font-semibold py-3.5 px-6 rounded-xl transition-all duration-200 flex items-center justify-center gap-2 shadow-sm shadow-red-600/20 active:scale-95">
                 <Zap className="w-5 h-5 fill-white" />
                 <span>Buy Now</span>
