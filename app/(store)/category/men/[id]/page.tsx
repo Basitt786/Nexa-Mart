@@ -1,5 +1,5 @@
 import ImageWithSpinner from '@/components/ImageWithSpinner';
-import { ShoppingCart } from 'lucide-react';
+import { ShoppingCart, Zap, Star } from 'lucide-react';
 
 type ProductData = {
   id: number;
@@ -33,52 +33,79 @@ const Page = async ({ params }: PageProps) => {
   const data: ProductData = await res.json();
 
   if (!data) {
-    return <div className="text-white text-center">Product not found</div>;
+    return (
+      <div className="min-h-screen flex items-center justify-center text-gray-500 dark:text-gray-400">
+        Product not found
+      </div>
+    );
   }
 
   return (
-    <div className="min-h-screen p-4 sm:p-6 flex items-center justify-center">
-      <div className="w-full max-w-6xl bg-black/50 rounded-2xl p-4 sm:p-6 lg:p-8">
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 lg:gap-12">
+    <div className="min-h-screen p-4 sm:p-6 lg:p-12 flex items-center justify-center bg-gray-50 dark:bg-black transition-colors duration-200">
+      <div className="w-full max-w-5xl bg-white dark:bg-zinc-900/80 border border-gray-200 dark:border-zinc-800 rounded-3xl p-6 sm:p-8 lg:p-10 shadow-sm">
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 lg:gap-12 items-center">
           
           {/* Image Section */}
-          <div className="flex items-center justify-center p-4 bg-white/5 rounded-xl">
-            <ImageWithSpinner src={data.image} alt={data.title} />
+          <div className="flex items-center justify-center p-8 bg-gray-50 dark:bg-zinc-800/50 border border-gray-100 dark:border-zinc-800 rounded-2xl relative group overflow-hidden">
+            <div className="relative w-full aspect-square flex items-center justify-center transition-transform duration-300 group-hover:scale-105">
+              <ImageWithSpinner src={data.image} alt={data.title} />
+            </div>
           </div>
 
           {/* Details Section */}
-          <div className="flex flex-col justify-center space-y-4">
-            <h1 className="text-red-600 mt-10 sm:text-2xl lg:text-4xl font-bold text-center lg:text-left">
-              {data.title}
-            </h1>
+          <div className="flex flex-col justify-center space-y-5">
+            
+            {/* Category Badge & Title */}
+            <div>
+              <span className="text-xs font-semibold uppercase tracking-wider text-red-600 dark:text-red-400 bg-red-50 dark:bg-red-950/50 px-3 py-1 rounded-full border border-red-100 dark:border-red-900/50">
+                {data.category}
+              </span>
+              <h1 className="text-gray-900 dark:text-white mt-3 text-2xl sm:text-3xl lg:text-4xl font-bold leading-tight">
+                {data.title}
+              </h1>
+            </div>
 
-            <p className="text-gray-300 text-sm sm:text-base text-center lg:text-left leading-relaxed">
+            {/* Rating & Count */}
+            <div className="flex items-center gap-3">
+              <div className="flex items-center gap-1.5 bg-amber-50 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-800/60 px-2.5 py-1 rounded-lg text-amber-700 dark:text-amber-400 text-sm font-semibold">
+                <Star className="w-4 h-4 fill-amber-400 text-amber-400" />
+                <span>{data.rating.rate}</span>
+              </div>
+              <span className="text-gray-500 dark:text-gray-400 text-sm">
+                ({data.rating.count} reviews)
+              </span>
+            </div>
+
+            {/* Price */}
+            <div className="flex items-baseline gap-3 border-y border-gray-100 dark:border-zinc-800 py-4">
+              <span className="text-3xl sm:text-4xl font-extrabold text-gray-900 dark:text-white">
+                ${data.price.toFixed(2)}
+              </span>
+              <span className="text-xs text-emerald-700 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-950/50 px-2.5 py-1 rounded-md font-medium border border-emerald-100 dark:border-emerald-900/50">
+                In Stock
+              </span>
+            </div>
+
+            {/* Description */}
+            <p className="text-gray-600 dark:text-gray-300 text-sm sm:text-base leading-relaxed">
               {data.description}
             </p>
 
-            {/* Price & Rating */}
-            <div className="flex flex-col sm:flex-row items-center justify-center lg:justify-start gap-4">
-              <p className="text-red-600 font-bold text-2xl sm:text-4xl">
-                ${data.price}
-              </p>
-              <div className="flex items-center gap-2 text-yellow-400">
-                <span>⭐ {data.rating.rate}</span>
-                <span className="text-gray-400 text-sm">
-                  ({data.rating.count} reviews)
-                </span>
-              </div>
+            {/* Action Buttons */}
+            <div className="flex flex-col sm:flex-row gap-3 pt-2">
+              {/* Add to Cart Button */}
+              <button className="flex-1 bg-gray-900 dark:bg-white hover:bg-black dark:hover:bg-gray-200 text-white dark:text-gray-900 font-semibold py-3.5 px-6 rounded-xl transition-all duration-200 flex items-center justify-center gap-2 shadow-sm active:scale-95">
+                <ShoppingCart className="w-5 h-5 text-gray-300 dark:text-gray-700" />
+                <span>Add to Cart</span>
+              </button>
+
+              {/* Buy Now Button */}
+              <button className="flex-1 bg-red-600 hover:bg-red-700 text-white font-semibold py-3.5 px-6 rounded-xl transition-all duration-200 flex items-center justify-center gap-2 shadow-sm shadow-red-600/20 active:scale-95">
+                <Zap className="w-5 h-5 fill-white" />
+                <span>Buy Now</span>
+              </button>
             </div>
 
-            {/* Buttons */}
-            <div className="flex flex-col sm:flex-row gap-3 mt-6 ">
-              <button className="bg-blue-700 border-4 border-red-600 flex-1  hover:bg-blue-700 text-white font-semibold px-6 py-3 rounded-xl transition-all duration-300 flex items-center justify-center gap-2 ">
-               
-                Add to Cart
-              </button>
-              <button className="border-4 border-red-600 flex-1 bg-green-600 hover:bg-green-700 text-white font-semibold px-6 py-3 rounded-xl transition-all duration-300 flex items-center justify-center gap-2">
-                Buy Now
-              </button>
-            </div>
           </div>
         </div>
       </div>
