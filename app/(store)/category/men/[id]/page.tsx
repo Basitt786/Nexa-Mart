@@ -1,10 +1,12 @@
 import ImageWithSpinner from '@/components/ImageWithSpinner';
-import { ShoppingCart, Zap, Star } from 'lucide-react';
+import { ShoppingCart, Zap, Star, ArrowLeft } from 'lucide-react';
 import { notFound } from 'next/navigation';
 import { Metadata } from 'next';
+import Link from 'next/link';
+import { cache } from 'react';
 
-// Build-time static generation failures aur FakeStore API blocking se bachne ke liye
-export const dynamic = 'force-dynamic';
+
+export const revalidate = 60;
 
 type ProductData = {
   id: number;
@@ -25,27 +27,37 @@ type PageProps = {
   }>;
 };
 
-// 1. Helper function for consistent data fetching
-async function getProduct(id: string): Promise<ProductData | null> {
-  try {
-    const res = await fetch(`https://fakestoreapi.com/products/${id}`, {
-      headers: {
-        'User-Agent':
-          'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
-        Accept: 'application/json',
-      },
-      cache: 'no-store',
-    });
 
-    if (!res.ok) return null;
-    return await res.json();
-  } catch (error) {
-    console.error(`Error fetching product ID ${id}:`, error);
-    return null;
+const getProduct = cache(async (id: string): Promise<ProductData | null> => {
+  const maxRetries = 3;
+
+  for (let attempt = 1; attempt <= maxRetries; attempt++) {
+    try {
+      const res = await fetch(`https://fakestoreapi.com/products/${id}`, {
+        headers: {
+          Accept: 'application/json',
+        },
+      });
+
+      if (!res.ok) {
+        console.error(`Attempt ${attempt}: bad response (${res.status}) for product ID ${id}`);
+        if (attempt === maxRetries) return null;
+        await new Promise((r) => setTimeout(r, 500));
+        continue;
+      }
+
+      return await res.json();
+    } catch (error) {
+      console.error(`Attempt ${attempt} failed for product ID ${id}:`, error);
+      if (attempt === maxRetries) return null;
+      await new Promise((r) => setTimeout(r, 500));
+    }
   }
-}
 
-// 2. Dynamic Metadata for SEO
+  return null;
+});
+
+// 3. Dynamic Metadata for SEO
 export async function generateMetadata({ params }: PageProps): Promise<Metadata> {
   const resolvedParams = await params;
   const product = await getProduct(resolvedParams.id);
@@ -67,12 +79,11 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
   };
 }
 
-// 3. Main Page Component
+// 4. Main Page Component
 const Page = async ({ params }: PageProps) => {
   const resolvedParams = await params;
   const data = await getProduct(resolvedParams.id);
 
-  // Direct Next.js 404 Trigger
   if (!data || !data.id) {
     notFound();
   }
@@ -81,10 +92,22 @@ const Page = async ({ params }: PageProps) => {
   const ratingCount = data.rating?.count ?? 0;
 
   return (
-    <div className="min-h-screen p-4 sm:p-6 lg:p-12 flex items-center justify-center bg-gray-50 dark:bg-black transition-colors duration-200">
+    <div className="min-h-screen p-4 sm:p-6 lg:p-12 flex flex-col items-center justify-center bg-gray-50 dark:bg-black transition-colors duration-200">
+
+      {/* Top Back Navigation */}
+      <div className="w-full max-w-5xl mb-4 flex items-center">
+        <Link
+          href="/category/men"
+          className="inline-flex items-center gap-2 text-sm text-zinc-600 dark:text-zinc-400 hover:text-red-600 dark:hover:text-red-500 transition-colors"
+        >
+          <ArrowLeft className="w-4 h-4" />
+          <span>Back to Collection</span>
+        </Link>
+      </div>
+
       <div className="w-full max-w-5xl bg-white dark:bg-zinc-900/80 border border-gray-200 dark:border-zinc-800 rounded-3xl p-6 sm:p-8 lg:p-10 shadow-sm">
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 lg:gap-12 items-center">
-          
+
           {/* Image Section */}
           <div className="flex items-center justify-center p-8 bg-gray-50 dark:bg-zinc-800/50 border border-gray-100 dark:border-zinc-800 rounded-2xl relative group overflow-hidden">
             <div className="relative w-full aspect-square flex items-center justify-center transition-transform duration-300 group-hover:scale-105">
@@ -94,7 +117,7 @@ const Page = async ({ params }: PageProps) => {
 
           {/* Details Section */}
           <div className="flex flex-col justify-center space-y-5">
-            
+
             {/* Category Badge & Title */}
             <div>
               <span className="text-xs font-semibold uppercase tracking-wider text-red-600 dark:text-red-400 bg-red-50 dark:bg-red-950/50 px-3 py-1 rounded-full border border-red-100 dark:border-red-900/50">

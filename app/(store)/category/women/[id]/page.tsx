@@ -1,9 +1,14 @@
 import ImageWithSpinner from '@/components/ImageWithSpinner';
-import { ShoppingCart, Zap, Star } from 'lucide-react';
+import { ShoppingCart, Zap, Star, ArrowLeft } from 'lucide-react';
 import { notFound } from 'next/navigation';
+import { Metadata } from 'next';
+import Link from 'next/link';
+import { cache } from 'react';
 
-// 🚨 Build-time static rendering failure ko bypass karne ke liye force-dynamic set karein
-export const dynamic = 'force-dynamic';
+// Product pages do not change frequently; cache for 1 minute instead of 1 hour.
+// (A long revalidate window meant a single failed fetch could stay cached as a
+// 404 for up to an hour on Vercel — this keeps a bad result from sticking around.)
+export const revalidate = 60;
 
 type ProductData = {
   id: number;
@@ -24,39 +29,89 @@ type PageProps = {
   }>;
 };
 
-const Page = async ({ params }: PageProps) => {
-  const resolvedParams = await params;
-  const { id } = resolvedParams;
+// 1. Wrapped in React cache to prevent duplicate fetch calls in metadata & page body
+// 2. Retries a few times before giving up, so a temporary hiccup from the free
+//    fakestoreapi.com service doesn't trigger a 404.
+const getProduct = cache(async (id: string): Promise<ProductData | null> => {
+  const maxRetries = 3;
 
-  let data: ProductData | null = null;
+  for (let attempt = 1; attempt <= maxRetries; attempt++) {
+    try {
+      const res = await fetch(`https://fakestoreapi.com/products/${id}`, {
+        headers: {
+          Accept: 'application/json',
+        },
+      });
 
-  try {
-    const res = await fetch(`https://fakestoreapi.com/products/${id}`, {
-      headers: {
-        'User-Agent':
-          'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
-        Accept: 'application/json',
-      },
-      cache: 'no-store',
-    });
+      if (!res.ok) {
+        console.error(`Attempt ${attempt}: bad response (${res.status}) for product ID ${id}`);
+        if (attempt === maxRetries) return null;
+        await new Promise((r) => setTimeout(r, 500));
+        continue;
+      }
 
-    if (res.ok) {
-      data = await res.json();
+      return await res.json();
+    } catch (error) {
+      console.error(`Attempt ${attempt} failed for product ID ${id}:`, error);
+      if (attempt === maxRetries) return null;
+      await new Promise((r) => setTimeout(r, 500));
     }
-  } catch (error) {
-    console.error(`Failed to fetch product with ID ${id}:`, error);
   }
 
-  // Agar product API se nahi mila ya invalid hai, tab 404 trigger hoga
+  return null;
+});
+
+// 3. Dynamic Metadata for SEO
+export async function generateMetadata({ params }: PageProps): Promise<Metadata> {
+  const resolvedParams = await params;
+  const product = await getProduct(resolvedParams.id);
+
+  if (!product) {
+    return {
+      title: 'Product Not Found',
+    };
+  }
+
+  return {
+    title: `${product.title} | Store`,
+    description: product.description.slice(0, 160),
+    openGraph: {
+      title: product.title,
+      description: product.description,
+      images: [{ url: product.image }],
+    },
+  };
+}
+
+// 4. Main Page Component
+const Page = async ({ params }: PageProps) => {
+  const resolvedParams = await params;
+  const data = await getProduct(resolvedParams.id);
+
   if (!data || !data.id) {
     notFound();
   }
 
+  const ratingRate = data.rating?.rate ?? 0;
+  const ratingCount = data.rating?.count ?? 0;
+
   return (
-    <div className="min-h-screen p-4 sm:p-6 lg:p-12 flex items-center justify-center bg-gray-50 dark:bg-black transition-colors duration-200">
+    <div className="min-h-screen p-4 sm:p-6 lg:p-12 flex flex-col items-center justify-center bg-gray-50 dark:bg-black transition-colors duration-200">
+
+      {/* Top Back Navigation */}
+      <div className="w-full max-w-5xl mb-4 flex items-center">
+        <Link
+          href="/category/women"
+          className="inline-flex items-center gap-2 text-sm text-zinc-600 dark:text-zinc-400 hover:text-red-600 dark:hover:text-red-500 transition-colors"
+        >
+          <ArrowLeft className="w-4 h-4" />
+          <span>Back to Collection</span>
+        </Link>
+      </div>
+
       <div className="w-full max-w-5xl bg-white dark:bg-zinc-900/80 border border-gray-200 dark:border-zinc-800 rounded-3xl p-6 sm:p-8 lg:p-10 shadow-sm">
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 lg:gap-12 items-center">
-          
+
           {/* Image Section */}
           <div className="flex items-center justify-center p-8 bg-gray-50 dark:bg-zinc-800/50 border border-gray-100 dark:border-zinc-800 rounded-2xl relative group overflow-hidden">
             <div className="relative w-full aspect-square flex items-center justify-center transition-transform duration-300 group-hover:scale-105">
@@ -66,7 +121,7 @@ const Page = async ({ params }: PageProps) => {
 
           {/* Details Section */}
           <div className="flex flex-col justify-center space-y-5">
-            
+
             {/* Category Badge & Title */}
             <div>
               <span className="text-xs font-semibold uppercase tracking-wider text-red-600 dark:text-red-400 bg-red-50 dark:bg-red-950/50 px-3 py-1 rounded-full border border-red-100 dark:border-red-900/50">
@@ -77,14 +132,14 @@ const Page = async ({ params }: PageProps) => {
               </h1>
             </div>
 
-            {/* Rating & Count with Safe Guards */}
+            {/* Rating & Count */}
             <div className="flex items-center gap-3">
               <div className="flex items-center gap-1.5 bg-amber-50 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-800/60 px-2.5 py-1 rounded-lg text-amber-700 dark:text-amber-400 text-sm font-semibold">
                 <Star className="w-4 h-4 fill-amber-400 text-amber-400" />
-                <span>{data.rating?.rate ?? 0}</span>
+                <span>{ratingRate}</span>
               </div>
               <span className="text-gray-500 dark:text-gray-400 text-sm">
-                ({data.rating?.count ?? 0} reviews)
+                ({ratingCount} reviews)
               </span>
             </div>
 
