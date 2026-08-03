@@ -5,6 +5,7 @@ import { ThemeProvider } from "../../components/theme-provider";
 import Navbar from "../../components/Navbar";
 import Footer from "../../components/Footer";
 import MobileBottomNav from "@/components/MobileBottomNav";
+import ChatWidget from "@/components/ChatWidget";
 import Providers from "../../components/Providers";
 
 const geistSans = Geist({
@@ -43,6 +44,7 @@ export default function RootLayout({
           {children}
           <Footer />
           <MobileBottomNav />
+          <ChatWidget />
         </ThemeProvider>
         </Providers>
       </body>
