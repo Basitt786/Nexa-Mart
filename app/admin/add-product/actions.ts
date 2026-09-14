@@ -4,7 +4,6 @@
 import { db } from "@/db";
 import { products } from "@/db/schema";
 import { revalidatePath } from "next/cache";
-import { redirect } from "next/navigation";
 
 export async function createProduct(formData: FormData) {
   const title = formData.get("title") as string;
@@ -17,12 +16,9 @@ export async function createProduct(formData: FormData) {
     throw new Error("Required fields are missing");
   }
 
-  // Convert string price to number (or keep as string if schema uses decimal/text)
-  const price = parseFloat(priceInput);
-
   await db.insert(products).values({
     title,
-    price,
+    price: priceInput,
     category,
     image,
     description: description || null,
@@ -31,5 +27,5 @@ export async function createProduct(formData: FormData) {
   revalidatePath("/");
   revalidatePath("/admin");
 
-  redirect("/admin");
+  return { success: true };
 }

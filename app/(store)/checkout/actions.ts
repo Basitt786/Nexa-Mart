@@ -10,6 +10,7 @@ type OrderInput = {
   city: string;
   items: { id: number; title: string; price: number; quantity: number }[];
   totalAmount: number;
+  paymentMethod?: string;
 };
 
 export async function placeOrder(data: OrderInput) {
@@ -21,6 +22,8 @@ export async function placeOrder(data: OrderInput) {
       city: data.city,
       items: JSON.stringify(data.items),
       totalAmount: data.totalAmount.toString(),
+      paymentMethod: data.paymentMethod || "COD",
+      paymentStatus: "unpaid",
     });
 
     return { success: true };

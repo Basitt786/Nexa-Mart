@@ -15,8 +15,7 @@ export async function POST(req: Request) {
     const modelMessages = await convertToModelMessages(messages);
 
     const result = streamText({
-      model: google('gemini-1.5-flash'), // Stable model for tool execution
-      stopWhenToolCalled: false,
+      model: google('gemini-1.5-flash'),
       system:
         'Aap Nexa-Mart e-commerce store ke helpful customer support AI assistant hain. Hamesha usi language/style me jawab dein jisme user ne sawal poocha hai. Jab bhi user kisi product ke baare me poochay, "searchProducts" tool use karein. Jab user apna name, phone, address aur product confirm kare, hamesha "createOrder" tool call karke order database mein save karein. Default payment method Cash on Delivery (COD) hai.',
       messages: modelMessages,
@@ -80,11 +79,11 @@ export async function POST(req: Request) {
                 phone,
                 address,
                 city,
-                items, 
+                items,
                 totalAmount: totalAmount.toString(),
                 status: 'pending',
-                paymentMethod: paymentMethod || 'COD', // Default to COD
-                paymentStatus: 'unpaid',               // Default payment status
+                paymentMethod: paymentMethod || 'COD',
+                paymentStatus: 'unpaid',
               }).returning();
 
               return {
