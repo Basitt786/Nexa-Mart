@@ -42,10 +42,10 @@ const Footer = () => {
         <div className="flex flex-col items-center gap-4">
           <h1 className="text-white font-extrabold text-2xl">Follow Us</h1>
           <div className="flex gap-4">
-            <Image src="/fb.png" alt="Facebook" width={35} height={35} style={{ height: 'auto' }} />
-            <Image src="/tw.png" alt="Twitter" width={35} height={35} style={{ height: 'auto' }} />
-            <Image src="/yt.png" alt="YouTube" width={35} height={35} style={{ height: 'auto' }} />
-            <Image src="/insta.png" alt="Instagram" width={35} height={35} style={{ height: 'auto' }} />
+            <Image src="/fb.png" alt="Facebook" width={35} height={35} />
+            <Image src="/tw.png" alt="Twitter" width={35} height={35} />
+            <Image src="/yt.png" alt="YouTube" width={35} height={35} />
+            <Image src="/insta.png" alt="Instagram" width={35} height={35} />
           </div>
         </div>
 

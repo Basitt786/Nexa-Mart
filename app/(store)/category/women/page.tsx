@@ -3,109 +3,112 @@
 import ImageWithSpinner from "@/components/ImageWithSpinner";
 import { useQuery } from "@tanstack/react-query";
 import Link from "next/link";
-import Image from "next/image";
+import fetchProductsByCategory from "@/actions/get-products";
 
 type Product = {
   id: number;
   title: string;
-  price: number;
+  price: number | string;
   image: string;
+  description: string | null;
+  category: string;
+  createdAt: Date;
 };
 
 const Page = () => {
-  const { data, isLoading, error } = useQuery<Product[]>({
-    queryKey: ["womenClothes"],
-    queryFn: async () => {
-      const res = await fetch(
-        `https://fakestoreapi.com/products/category/${encodeURIComponent(
-          "women's clothing"
-        )}`,
-        {
-          headers: {
-            Accept: "application/json",
-          },
-        }
-      );
+  const category = "women";
 
-      if (!res.ok) {
-        throw new Error("Failed to fetch products");
-      }
-      return res.json();
-    },
-    retry: 2, // Network drop par 2 baar auto-retry karega
-    staleTime: 1000 * 60 * 5, // 5 minute tak response cache rakhega
+  const { data, isLoading, error, refetch } = useQuery<Product[]>({
+    queryKey: ["products", category],
+    queryFn: () => fetchProductsByCategory(category),
+    staleTime: 1000 * 60 * 5,
   });
 
   if (isLoading) {
     return (
-      <div className="flex items-center justify-center h-screen">
-        <Image
-          src="/image.png"
-          alt="Loading..."
-          width={140}
-          height={140}
-          className="animate-caret-blink"
-          style={{ width: "auto", height: "auto" }}
-          priority
-        />
+      <div className="px-4 md:px-10 mt-6">
+        <div className="h-8 w-48 bg-zinc-800 animate-pulse rounded-md mb-6" />
+        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+          {Array.from({ length: 8 }).map((_, index) => (
+            <div
+              key={index}
+              className="p-6 bg-zinc-900/60 border border-zinc-800 rounded-2xl flex flex-col items-center gap-4 animate-pulse"
+            >
+              <div className="w-32 h-32 bg-zinc-800 rounded-xl" />
+              <div className="w-full h-4 bg-zinc-800 rounded mt-2" />
+              <div className="w-2/3 h-4 bg-zinc-800 rounded" />
+              <div className="w-1/2 h-6 bg-zinc-800 rounded mt-2" />
+              <div className="w-full h-10 bg-zinc-800 rounded-xl mt-4" />
+            </div>
+          ))}
+        </div>
       </div>
     );
   }
 
   if (error) {
     return (
-      <div className="flex flex-col items-center justify-center h-[60vh] text-center px-4">
-        <p className="text-red-500 font-semibold text-lg mb-1">
+      <div className="flex flex-col items-center justify-center min-h-[50vh] text-center px-4">
+        <p className="text-red-500 font-semibold text-lg mb-2">
           Unable to load products
         </p>
-        <p className="text-zinc-400 text-sm max-w-sm">
+        <p className="text-zinc-400 text-sm max-w-sm mb-4">
           {(error as Error).message}
         </p>
+        <button
+          onClick={() => refetch()}
+          className="px-4 py-2 bg-zinc-800 hover:bg-zinc-700 text-white text-sm rounded-lg transition-colors"
+        >
+          Try Again
+        </button>
       </div>
     );
   }
 
   return (
-    <>
-      <div className="px-4 md:px-10 mt-6">
-        <h1 className="text-2xl md:text-3xl font-medium">Women's Clothing</h1>
-      </div>
+    <div className="px-4 md:px-10 mt-6 pb-12">
+      <h1 className="text-2xl md:text-3xl font-semibold text-white mb-6">
+        Women's Collection
+      </h1>
 
-      {/* Grid container for perfectly balanced columns across viewports */}
-      <div className="w-full mt-4 rounded-2xl bg-gradient-to-r from-transparent via-black to-transparent grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 p-4">
-        {data && data.length > 0 ? (
-          data.map((item) => {
+      {data && data.length > 0 ? (
+        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+          {data.map((item) => {
             const { id, title, image, price } = item;
+            const numericPrice = typeof price === "number" ? price : parseFloat(price);
+
             return (
               <div
                 key={id}
                 className="
                   w-full
                   p-4 sm:p-6
-                  bg-black/50
-                  border border-white/10
+                  bg-zinc-900/80
+                  border border-zinc-800
                   rounded-2xl
                   flex
                   flex-col
-                  items-center
                   justify-between
                   transition-all
                   duration-300
                   hover:border-red-600/50
-                  hover:scale-[1.02]
+                  hover:translate-y-[-2px]
                 "
               >
                 <div className="flex flex-col items-center w-full">
-                  <ImageWithSpinner src={image} alt={title} />
-                  <h2 className="text-white font-semibold mt-4 text-center text-sm sm:text-base line-clamp-2">
+                  <div className="w-full aspect-square flex items-center justify-center p-4 bg-zinc-950/50 rounded-xl overflow-hidden">
+                    <ImageWithSpinner src={image} alt={title} />
+                  </div>
+
+                  <h2 className="text-white font-medium mt-4 text-center text-sm sm:text-base line-clamp-2 min-h-[2.5rem]">
                     {title}
                   </h2>
+
                   <p className="text-red-500 font-bold mt-2 text-lg">
-                    ${price ? price.toFixed(2) : "0.00"}
+                  Rs {numericPrice ? numericPrice.toLocaleString("en-PK") : "0"}
                   </p>
                 </div>
 
-                {/* View Details Button */}
                 <Link
                   href={`/category/women/${id}`}
                   className="
@@ -129,14 +132,14 @@ const Page = () => {
                 </Link>
               </div>
             );
-          })
-        ) : (
-          <div className="col-span-full text-center text-zinc-400 py-12">
-            No products available in this category.
-          </div>
-        )}
-      </div>
-    </>
+          })}
+        </div>
+      ) : (
+        <div className="text-center py-12 text-zinc-400">
+          No products found in this category.
+        </div>
+      )}
+    </div>
   );
 };
 

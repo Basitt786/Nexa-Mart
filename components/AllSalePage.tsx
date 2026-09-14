@@ -7,56 +7,38 @@ import ImageWithSpinner from "./ImageWithSpinner";
 import { useSelector } from "react-redux";
 import { RootState } from "@/app/store/store";
 
+import fetchAllProducts from "@/actions/get-all-products";
+
 type Product = {
   id: number;
   title: string;
-  price: number;
+  price: number | string;
   image: string;
+  description: string | null;
   category: string;
-};
-
-
-const SUPPORTED_CATEGORIES = ["men's clothing", "women's clothing"];
-
-const fetchProducts = async (): Promise<Product[]> => {
-  const res = await fetch("https://fakestoreapi.com/products", {
-    headers: {
-      Accept: "application/json",
-    },
-  });
-
-  if (!res.ok) {
-    throw new Error("Failed to fetch products");
-  }
-
-  return res.json();
+  createdAt: Date;
 };
 
 const AllSalePage = () => {
-  const { data, isLoading, error } = useQuery<Product[]>({
+  const { data, isLoading, error, refetch } = useQuery<Product[]>({
     queryKey: ["AllSales"],
-    queryFn: fetchProducts,
-    retry: 2, 
-    staleTime: 1000 * 60 * 5, 
+    queryFn: fetchAllProducts,
+    retry: 2,
+    staleTime: 1000 * 60 * 5,
   });
 
   const query = useSelector((state: RootState) => state.search?.query || "");
 
   const filteredProducts =
-    data
-      ?.filter((product: Product) =>
-        SUPPORTED_CATEGORIES.includes(product.category.toLowerCase())
-      )
-      .filter((product: Product) =>
-        product.title.toLowerCase().includes(query.toLowerCase())
-      ) || [];
-
+    data?.filter((product: Product) =>
+      product.title.toLowerCase().includes(query.toLowerCase())
+    ) || [];
 
   const getProductRoute = (category: string, id: number) => {
     const cat = category.toLowerCase();
-    if (cat === "men's clothing") return `/category/men/${id}`;
-    if (cat === "women's clothing") return `/category/women/${id}`;
-    return null; 
+    if (cat === "men") return `/category/men/${id}`;
+    if (cat === "women") return `/category/women/${id}`;
+    return `/product/${id}`;
   };
 
   if (isLoading) {
@@ -81,6 +63,12 @@ const AllSalePage = () => {
         <p className="text-sm text-gray-400">
           Connection refused by server. Please check your internet or reload.
         </p>
+        <button
+          onClick={() => refetch()}
+          className="px-4 py-2 bg-zinc-800 hover:bg-zinc-700 text-white text-sm rounded-lg transition-colors mt-2"
+        >
+          Try Again
+        </button>
       </div>
     );
   }
@@ -105,9 +93,8 @@ const AllSalePage = () => {
             filteredProducts.map((item: Product) => {
               const { id, title, image, price, category } = item;
               const route = getProductRoute(category, id);
-
-
-              if (!route) return null;
+              const numericPrice =
+                typeof price === "number" ? price : parseFloat(price);
 
               return (
                 <div
@@ -134,11 +121,10 @@ const AllSalePage = () => {
                       {title}
                     </h2>
                     <p className="text-red-500 font-bold mt-2 text-lg">
-                      ${price}
+                    Rs {numericPrice ? numericPrice.toLocaleString("en-PK") : "0"}
                     </p>
                   </div>
 
-                  {/* Dynamic Route Link */}
                   <Link
                     href={route}
                     className="

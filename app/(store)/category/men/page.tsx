@@ -3,36 +3,25 @@
 import ImageWithSpinner from "@/components/ImageWithSpinner";
 import { useQuery } from "@tanstack/react-query";
 import Link from "next/link";
+import fetchProductsByCategory from "@/actions/get-products";
 
 type Product = {
   id: number;
   title: string;
-  price: number;
+  price: number | string;
   image: string;
-};
-
-const fetchMenProducts = async (): Promise<Product[]> => {
-  const res = await fetch(
-    `https://fakestoreapi.com/products/category/${encodeURIComponent("men's clothing")}`,
-    {
-      headers: {
-        Accept: "application/json",
-      },
-    }
-  );
-
-  if (!res.ok) {
-    throw new Error("Failed to load products from server");
-  }
-
-  return res.json();
+  description: string | null;
+  category: string;
+  createdAt: Date;
 };
 
 const Page = () => {
+  const category = "men";
+
   const { data, isLoading, error, refetch } = useQuery<Product[]>({
-    queryKey: ["menClothes"],
-    queryFn: fetchMenProducts,
-    staleTime: 1000 * 60 * 5, // 5 minutes caching
+    queryKey: ["products", category],
+    queryFn: () => fetchProductsByCategory(category),
+    staleTime: 1000 * 60 * 5,
   });
 
   if (isLoading) {
@@ -86,6 +75,8 @@ const Page = () => {
         <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
           {data.map((item) => {
             const { id, title, image, price } = item;
+            const numericPrice = typeof price === "number" ? price : parseFloat(price);
+
             return (
               <div
                 key={id}
@@ -114,7 +105,7 @@ const Page = () => {
                   </h2>
 
                   <p className="text-red-500 font-bold mt-2 text-lg">
-                    ${price ? price.toFixed(2) : "0.00"}
+                  Rs {numericPrice ? numericPrice.toLocaleString("en-PK") : "0"}
                   </p>
                 </div>
 
