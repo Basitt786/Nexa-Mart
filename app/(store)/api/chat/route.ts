@@ -15,7 +15,8 @@ export async function POST(req: Request) {
     const modelMessages = await convertToModelMessages(messages);
 
     const result = streamText({
-      model: google('gemini-1.5-flash'),
+      // Updated model identifier to gemini-2.0-flash to fix 404 API route error
+      model: google('gemini-3.6-flash'),
       system:
         'Aap Nexa-Mart e-commerce store ke helpful customer support AI assistant hain. Hamesha usi language/style me jawab dein jisme user ne sawal poocha hai. Jab bhi user kisi product ke baare me poochay, "searchProducts" tool use karein. Jab user apna name, phone, address aur product confirm kare, hamesha "createOrder" tool call karke order database mein save karein. Default payment method Cash on Delivery (COD) hai.',
       messages: modelMessages,
